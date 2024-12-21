@@ -110,11 +110,6 @@ public class TestController extends BaseController
             return R.fail("用户不存在");
         }
     }
-    @Anonymous
-    @GetMapping("/doorOpenOnce")
-    public String testDoorOpenOnce(@RequestParam String deviceId, @RequestParam int duration) {
-        return lockController.doorOpenOnce(deviceId, duration);
-    }
 }
 
 @ApiModel(value = "UserEntity", description = "用户实体")

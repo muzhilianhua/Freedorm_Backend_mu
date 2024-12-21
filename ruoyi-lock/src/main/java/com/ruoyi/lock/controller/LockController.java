@@ -1,5 +1,6 @@
 package com.ruoyi.lock.controller;
 
+import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.lock.service.MqttGateway;
 import com.ruoyi.lock.domain.MqttMessage;
 import org.slf4j.Logger;
@@ -10,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/lock")
+@RequestMapping("/api/lock")
 public class LockController {
 
     @Autowired
@@ -20,7 +21,9 @@ public class LockController {
     private static final Logger logger = LoggerFactory.getLogger(LockController.class);
 
     @PostMapping("/doorOpenOnce")
-    public String doorOpenOnce(@RequestParam String deviceId, @RequestParam int duration) {
+    public AjaxResult doorOpenOnce(@RequestBody Map<String, Object> requestBody) {
+        String deviceId = (String) requestBody.get("deviceId");
+        int duration = (int) requestBody.get("duration");
         Map<String, Object> data = new HashMap<>();
         data.put("duration", duration);
 
@@ -32,7 +35,7 @@ public class LockController {
         String topic = "/" + deviceId + "/server2client";
         mqttGateway.sendToMqtt(topic, message);
         logger.info("Sending message to topic {}: {}", topic, message);
-        return "Command sent";
+        return AjaxResult.success();
     }
 
     // 添加其他操作类型的接口，例如 doorOpenTimer、doorLock 等
