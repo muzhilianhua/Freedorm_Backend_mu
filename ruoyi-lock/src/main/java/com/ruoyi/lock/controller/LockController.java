@@ -3,6 +3,7 @@ package com.ruoyi.lock.controller;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.lock.dto.AddTimingRequest;
 import com.ruoyi.lock.dto.DeleteTimingRequest;
+import com.ruoyi.lock.dto.ExistingTimingResponse;
 import com.ruoyi.lock.service.ILockService;
 import com.ruoyi.lock.service.MqttGateway;
 import com.ruoyi.lock.domain.MqttMessage;
@@ -13,11 +14,15 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
+@RestControllerAdvice
 @RequestMapping("/api/lock")
 public class LockController {
+
+    private static final Logger logger = LoggerFactory.getLogger(LockController.class);
 
     @Autowired
     private MqttGateway mqttGateway;
@@ -25,11 +30,8 @@ public class LockController {
     @Autowired
     private ILockService lockService;
 
-    @Autowired
-    private static final Logger logger = LoggerFactory.getLogger(LockController.class);
-
     @PostMapping("/doorOpenOnce")
-    public AjaxResult doorOpenOnce(@RequestBody Map<String, Object> requestBody) {
+    public AjaxResult doorOpenOnce(@RequestBody Map<String, Object> requestBody) throws Exception {
         String deviceId = (String) requestBody.get("deviceId");
         int duration = (int) requestBody.get("duration");
         Map<String, Object> data = new HashMap<>();
@@ -43,36 +45,38 @@ public class LockController {
         String topic = "/" + deviceId + "/server2client";
         mqttGateway.sendToMqtt(topic, message);
         logger.info("Sending message to topic {}: {}", topic, message);
-        return AjaxResult.success();
+        return AjaxResult.success("门锁操作成功");
     }
+
     /**
      * 新增定时开门时间段
      */
     @PostMapping("/timing/add")
-    public AjaxResult addTiming(@Valid @RequestBody AddTimingRequest request) {
-        try {
-            lockService.addTiming(request);
-            logger.info("Added timing for deviceId: {}", request.getDeviceId());
-            return AjaxResult.success("定时开门时间段添加成功");
-        } catch (Exception e) {
-            logger.error("Failed to add timing for deviceId: {}", request.getDeviceId(), e);
-            return AjaxResult.error("定时开门时间段添加失败: " + e.getMessage());
-        }
+    public AjaxResult addTiming(@Valid @RequestBody AddTimingRequest request) throws Exception {
+        lockService.addTiming(request);
+        logger.info("Added timing for deviceId: {}", request.getDeviceId());
+        return AjaxResult.success("定时开门时间段添加成功");
     }
 
     /**
      * 删除定时开门时间段
      */
     @DeleteMapping("/timing/delete")
-    public AjaxResult deleteTiming(@Valid @RequestBody DeleteTimingRequest request) {
-        try {
-            lockService.deleteTiming(request);
-            logger.info("Deleted timing for deviceId: {}", request.getDeviceId());
-            return AjaxResult.success("定时开门时间段删除成功");
-        } catch (Exception e) {
-            logger.error("Failed to delete timing for deviceId: {}", request.getDeviceId(), e);
-            return AjaxResult.error("定时开门时间段删除失败: " + e.getMessage());
-        }
+    public AjaxResult deleteTiming(@Valid @RequestBody DeleteTimingRequest request) throws Exception {
+        lockService.deleteTiming(request);
+        logger.info("Deleted timing for deviceId: {}", request.getDeviceId());
+        return AjaxResult.success("定时开门时间段删除成功");
+    }
+
+    /**
+     * 查询某个门锁已有的时间段
+     * GET 请求，传递 deviceId 作为查询参数
+     */
+    @GetMapping("/timing/existing")
+    public AjaxResult getExistingTimings(@RequestParam("deviceId") String deviceId) throws Exception {
+        List<ExistingTimingResponse> existingTimings = lockService.getExistingTimings(deviceId);
+        logger.info("Fetched existing timings for deviceId: {}", deviceId);
+        return AjaxResult.success(existingTimings);
     }
     // 添加其他操作类型的接口，例如 doorOpenTimer、doorLock 等
 }

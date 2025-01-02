@@ -1,6 +1,8 @@
 package com.ruoyi.framework.web.exception;
 
 import javax.servlet.http.HttpServletRequest;
+
+import com.ruoyi.common.exception.OverlappingTimingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
@@ -142,4 +144,16 @@ public class GlobalExceptionHandler
     {
         return AjaxResult.error("演示模式，不允许操作");
     }
+
+    /**
+     * 时间段重叠异常
+     */
+    @ExceptionHandler(OverlappingTimingException.class)
+    public AjaxResult handleOverlappingTimingException(OverlappingTimingException e)
+    {
+        log.error(e.getMessage(), e);
+        String message = e.getMessage();
+        return AjaxResult.error(message);
+    }
+
 }

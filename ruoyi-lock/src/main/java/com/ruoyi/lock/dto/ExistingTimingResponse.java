@@ -1,24 +1,24 @@
 package com.ruoyi.lock.dto;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
-import java.time.LocalTime;
 import java.util.List;
 
-public class AddTimingRequest {
-
-    @NotBlank(message = "deviceId不能为空")
+public class ExistingTimingResponse {
     private String deviceId;
-
-    @NotEmpty(message = "daysOfWeek不能为空")
     private List<Integer> daysOfWeek; // 1=星期一，7=星期日
+    private String startTime; // "HH:mm:ss"
+    private String endTime;
 
-    @NotNull(message = "startTime不能为空")
-    private LocalTime startTime;
+    // Constructors
 
-    @NotNull(message = "endTime不能为空")
-    private LocalTime endTime;
+    public ExistingTimingResponse() {
+    }
+
+    public ExistingTimingResponse(String deviceId, List<Integer> daysOfWeek, String startTime, String endTime) {
+        this.deviceId = deviceId;
+        this.daysOfWeek = daysOfWeek;
+        this.startTime = startTime;
+        this.endTime = endTime;
+    }
 
     // Getters and Setters
 
@@ -38,19 +38,19 @@ public class AddTimingRequest {
         this.daysOfWeek = daysOfWeek;
     }
 
-    public LocalTime getStartTime() {
+    public String getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(LocalTime startTime) {
+    public void setStartTime(String startTime) {
         this.startTime = startTime;
     }
 
-    public LocalTime getEndTime() {
+    public String getEndTime() {
         return endTime;
     }
 
-    public void setEndTime(LocalTime endTime) {
+    public void setEndTime(String endTime) {
         this.endTime = endTime;
     }
 }

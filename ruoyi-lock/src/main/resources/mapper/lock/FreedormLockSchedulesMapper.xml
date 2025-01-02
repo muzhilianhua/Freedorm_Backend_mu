@@ -97,4 +97,20 @@
           AND start_time = #{startTime}
           AND end_time = #{endTime}
     </delete>
+
+    <select id="findByDeviceId" parameterType="String" resultMap="FreedormLockSchedulesResultMap">
+        SELECT schedule_id, device_id, day_of_week, start_time, end_time, created_at, updated_at
+        FROM freedorm_lock_schedules
+        WHERE device_id = #{deviceId}
+        ORDER BY day_of_week ASC, start_time ASC
+    </select>
+
+    <!-- 新增的方法：根据 device_id 和 day_of_week 查询时间段 -->
+    <select id="findByDeviceIdAndDayOfWeek" parameterType="map" resultMap="FreedormLockSchedulesResultMap">
+        SELECT schedule_id, device_id, day_of_week, start_time, end_time, created_at, updated_at
+        FROM freedorm_lock_schedules
+        WHERE device_id = #{deviceId}
+          AND day_of_week = #{dayOfWeek}
+        ORDER BY start_time ASC
+    </select>
 </mapper>

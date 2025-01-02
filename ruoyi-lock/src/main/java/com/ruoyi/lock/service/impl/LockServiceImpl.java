@@ -1,8 +1,10 @@
 package com.ruoyi.lock.service.impl;
 
+import com.ruoyi.common.exception.OverlappingTimingException;
 import com.ruoyi.lock.domain.FreedormLockSchedule;
 import com.ruoyi.lock.dto.AddTimingRequest;
 import com.ruoyi.lock.dto.DeleteTimingRequest;
+import com.ruoyi.lock.dto.ExistingTimingResponse;
 import com.ruoyi.lock.mapper.FreedormLockSchedulesMapper;
 import com.ruoyi.lock.service.ILockService;
 import com.ruoyi.lock.service.MqttGateway;
@@ -10,8 +12,9 @@ import com.ruoyi.lock.domain.MqttMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.HashMap;
-import java.util.Map;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class LockServiceImpl implements ILockService {
@@ -23,66 +26,135 @@ public class LockServiceImpl implements ILockService {
     private MqttGateway mqttGateway;
 
     @Override
-    @Transactional
-    public void addTiming(AddTimingRequest request) throws Exception {
-        // 创建新的时间表记录
-        FreedormLockSchedule schedule = new FreedormLockSchedule();
-        schedule.setDeviceId(request.getDeviceId());
-        schedule.setStartTime(request.getStartTime().toString());
-        schedule.setEndTime(request.getEndTime().toString());
-        schedule.setDayOfWeek(getCurrentDayOfWeek()); // 根据需要设置
-        schedulesMapper.insertFreedormLockSchedule(schedule);
+    @Transactional(rollbackFor = Exception.class)
+    public void addTiming(AddTimingRequest request) {
+        for (Integer day : request.getDaysOfWeek()) {
+            // 检查 day 是否在1-7之间
+            if (day < 1 || day > 7) {
+                throw new IllegalArgumentException("dayOfWeek 必须在1到7之间");
+            }
 
-        // 发送 MQTT 消息给设备，通知添加定时开门时间段
-        Map<String, Object> data = new HashMap<>();
-        data.put("action", "add_timing");
-        data.put("start_time", schedule.getStartTime());
-        data.put("end_time", schedule.getEndTime());
+            // 检查是否有重叠的时间段
+            List<FreedormLockSchedule> existingSchedules = schedulesMapper.findByDeviceIdAndDayOfWeek(request.getDeviceId(), day);
+            for (FreedormLockSchedule existingSchedule : existingSchedules) {
+                if (isOverlapping(existingSchedule.getStartTime(), existingSchedule.getEndTime(),
+                        request.getStartTime().toString(), request.getEndTime().toString())) {
+                    throw new OverlappingTimingException("与现有时间段重叠，设备ID: " + request.getDeviceId() + ", 星期: " + day);
+                }
+            }
 
-        MqttMessage<Map<String, Object>> message = new MqttMessage<>();
-        message.setOperate("timing_update");
-        message.setTimestamp(System.currentTimeMillis() / 1000);
-        message.setData(data);
+            // 创建新的时间表记录
+            FreedormLockSchedule schedule = new FreedormLockSchedule();
+            schedule.setDeviceId(request.getDeviceId());
+            schedule.setDayOfWeek(day);
+            schedule.setStartTime(request.getStartTime().toString());
+            schedule.setEndTime(request.getEndTime().toString());
 
-        String topic = "/" + request.getDeviceId() + "/server2client";
-        mqttGateway.sendToMqtt(topic, message);
-    }
+            // 插入数据库
+            schedulesMapper.insertFreedormLockSchedule(schedule);
 
-    @Override
-    @Transactional
-    public void deleteTiming(DeleteTimingRequest request) throws Exception {
-        // 查找并删除对应的时间表记录
-        FreedormLockSchedule schedule = new FreedormLockSchedule();
-        schedule.setDeviceId(request.getDeviceId());
-        schedule.setStartTime(request.getStartTime().toString());
-        schedule.setEndTime(request.getEndTime().toString());
+            // 发送 MQTT 消息给设备，通知添加定时开门时间段
+            Map<String, Object> data = new HashMap<>();
+            data.put("action", "add_timing");
+            data.put("day_of_week", day);
+            data.put("start_time", schedule.getStartTime());
+            data.put("end_time", schedule.getEndTime());
 
-        int deletedRows = schedulesMapper.deleteFreedormLockSchedule(schedule);
-        if (deletedRows == 0) {
-            throw new Exception("未找到对应的时间段记录");
+            MqttMessage<Map<String, Object>> message = new MqttMessage<>();
+            message.setOperate("timing_update");
+            message.setTimestamp(System.currentTimeMillis() / 1000);
+            message.setData(data);
+
+            String topic = "/" + request.getDeviceId() + "/server2client";
+            mqttGateway.sendToMqtt(topic, message);
         }
-
-        // 发送 MQTT 消息给设备，通知删除定时开门时间段
-        Map<String, Object> data = new HashMap<>();
-        data.put("action", "delete_timing");
-        data.put("start_time", schedule.getStartTime());
-        data.put("end_time", schedule.getEndTime());
-
-        MqttMessage<Map<String, Object>> message = new MqttMessage<>();
-        message.setOperate("timing_update");
-        message.setTimestamp(System.currentTimeMillis() / 1000);
-        message.setData(data);
-
-        String topic = "/" + request.getDeviceId() + "/server2client";
-        mqttGateway.sendToMqtt(topic, message);
     }
 
     /**
-     * 获取当前星期几（1=星期一，7=星期日）
-     * 根据需要调整获取星期的方法
+     * 检查两个时间段是否重叠
+     *
+     * @param existingStart 现有时间段的开始时间（格式："HH:mm:ss"）
+     * @param existingEnd   现有时间段的结束时间（格式："HH:mm:ss"）
+     * @param newStart      新时间段的开始时间（格式："HH:mm:ss"）
+     * @param newEnd        新时间段的结束时间（格式："HH:mm:ss"）
+     * @return 如果重叠则返回 true，否则返回 false
      */
-    private int getCurrentDayOfWeek() {
-        java.time.DayOfWeek day = java.time.LocalDate.now().getDayOfWeek();
-        return day.getValue();
+    private boolean isOverlapping(String existingStart, String existingEnd, String newStart, String newEnd) {
+        return !newStart.equals(existingEnd) && !newEnd.equals(existingStart) &&
+               newStart.compareTo(existingEnd) < 0 && existingStart.compareTo(newEnd) < 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteTiming(DeleteTimingRequest request) {
+        for (Integer day : request.getDaysOfWeek()) {
+            // 检查 day 是否在1-7之间
+            if (day < 1 || day > 7) {
+                throw new IllegalArgumentException("dayOfWeek 必须在1到7之间");
+            }
+
+            // 创建时间表记录，用于删除
+            FreedormLockSchedule schedule = new FreedormLockSchedule();
+            schedule.setDeviceId(request.getDeviceId());
+            schedule.setDayOfWeek(day);
+            schedule.setStartTime(request.getStartTime().toString());
+            schedule.setEndTime(request.getEndTime().toString());
+
+            // 删除记录
+            int deletedRows = schedulesMapper.deleteFreedormLockSchedule(schedule);
+            if (deletedRows == 0) {
+                throw new NoSuchElementException("未找到对应的时间段记录，deviceId: " + request.getDeviceId() + ", dayOfWeek: " + day);
+            }
+
+            // 发送 MQTT 消息给设备，通知删除定时开门时间段
+            Map<String, Object> data = new HashMap<>();
+            data.put("action", "delete_timing");
+            data.put("day_of_week", day);
+            data.put("start_time", schedule.getStartTime());
+            data.put("end_time", schedule.getEndTime());
+
+            MqttMessage<Map<String, Object>> message = new MqttMessage<>();
+            message.setOperate("timing_update");
+            message.setTimestamp(System.currentTimeMillis() / 1000);
+            message.setData(data);
+
+            String topic = "/" + request.getDeviceId() + "/server2client";
+            mqttGateway.sendToMqtt(topic, message);
+        }
+    }
+
+    @Override
+    public List<ExistingTimingResponse> getExistingTimings(String deviceId) {
+        // 查询数据库中该设备的所有时间段
+        List<FreedormLockSchedule> schedules = schedulesMapper.findByDeviceId(deviceId);
+        if (schedules == null || schedules.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 将时间段按 startTime 和 endTime 分组，并收集对应的 daysOfWeek
+        Map<String, List<Integer>> grouped = schedules.stream()
+                .collect(Collectors.groupingBy(
+                        schedule -> schedule.getStartTime() + "|" + schedule.getEndTime(),
+                        Collectors.mapping(FreedormLockSchedule::getDayOfWeek, Collectors.toList())
+                ));
+
+        // 构建响应列表
+        List<ExistingTimingResponse> responseList = new ArrayList<>();
+        for (Map.Entry<String, List<Integer>> entry : grouped.entrySet()) {
+            String[] times = entry.getKey().split("\\|");
+            String startTime = times[0];
+            String endTime = times[1];
+            List<Integer> daysOfWeek = entry.getValue();
+
+            ExistingTimingResponse response = new ExistingTimingResponse();
+            response.setDeviceId(deviceId);
+            response.setDaysOfWeek(daysOfWeek);
+            response.setStartTime(startTime);
+            response.setEndTime(endTime);
+
+            responseList.add(response);
+        }
+
+        return responseList;
     }
 }
