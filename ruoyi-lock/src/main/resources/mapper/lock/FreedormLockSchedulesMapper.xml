@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.lock.mapper.FreedormLockSchedulesMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="FreedormLockSchedulesResultMap" type="com.ruoyi.lock.domain.FreedormLockSchedule">
+        <id property="scheduleId" column="schedule_id" />
+        <result property="deviceId" column="device_id" />
+        <result property="dayOfWeek" column="day_of_week" />
+        <result property="startTime" column="start_time" />
+        <result property="endTime" column="end_time" />
+        <result property="createdAt" column="created_at" />
+        <result property="updatedAt" column="updated_at" />
+    </resultMap>
+
+    <!-- 插入操作 -->
+    <insert id="insertFreedormLockSchedule" parameterType="com.ruoyi.lock.domain.FreedormLockSchedule">
+        INSERT INTO freedorm_lock_schedules (
+        <if test="deviceId != null and deviceId != ''">device_id,</if>
+        <if test="dayOfWeek != null">day_of_week,</if>
+        <if test="startTime != null and startTime != ''">start_time,</if>
+        <if test="endTime != null and endTime != ''">end_time,</if>
+        created_at,
+        updated_at
+        )
+        VALUES (
+        <if test="deviceId != null and deviceId != ''">#{deviceId},</if>
+        <if test="dayOfWeek != null">#{dayOfWeek},</if>
+        <if test="startTime != null and startTime != ''">#{startTime},</if>
+        <if test="endTime != null and endTime != ''">#{endTime},</if>
+        sysdate(),
+        sysdate()
+        )
+    </insert>
+
+    <!-- 更新操作 -->
+    <update id="updateFreedormLockSchedule" parameterType="com.ruoyi.lock.domain.FreedormLockSchedule">
+        UPDATE freedorm_lock_schedules
+        <set>
+            <if test="deviceId != null and deviceId != ''">device_id = #{deviceId},</if>
+            <if test="dayOfWeek != null">day_of_week = #{dayOfWeek},</if>
+            <if test="startTime != null and startTime != ''">start_time = #{startTime},</if>
+            <if test="endTime != null and endTime != ''">end_time = #{endTime},</if>
+            updated_at = sysdate()
+        </set>
+        WHERE schedule_id = #{scheduleId}
+    </update>
+
+    <!-- 查询列表 -->
+    <select id="selectFreedormLockScheduleList" parameterType="com.ruoyi.lock.domain.FreedormLockSchedule" resultMap="FreedormLockSchedulesResultMap">
+        SELECT schedule_id, device_id, day_of_week, start_time, end_time, created_at, updated_at
+        FROM freedorm_lock_schedules
+        <where>
+            <if test="deviceId != null and deviceId != ''">
+                AND device_id = #{deviceId}
+            </if>
+            <if test="dayOfWeek != null">
+                AND day_of_week = #{dayOfWeek}
+            </if>
+            <if test="params.startTime != null">
+                AND start_time &gt;= #{params.startTime}
+            </if>
+            <if test="params.endTime != null">
+                AND end_time &lt;= #{params.endTime}
+            </if>
+        </where>
+        ORDER BY schedule_id ASC
+    </select>
+
+    <!-- 根据 schedule_id 查询单个记录 -->
+    <select id="selectFreedormLockScheduleById" parameterType="Long" resultMap="FreedormLockSchedulesResultMap">
+        SELECT schedule_id, device_id, day_of_week, start_time, end_time, created_at, updated_at
+        FROM freedorm_lock_schedules
+        WHERE schedule_id = #{scheduleId}
+    </select>
+
+    <!-- 根据 schedule_id 删除记录 -->
+    <delete id="deleteFreedormLockScheduleById" parameterType="Long">
+        DELETE FROM freedorm_lock_schedules
+        WHERE schedule_id = #{scheduleId}
+    </delete>
+
+    <!-- 根据多个 schedule_id 删除记录 -->
+    <delete id="deleteFreedormLockSchedulesByIds" parameterType="List">
+        DELETE FROM freedorm_lock_schedules
+        WHERE schedule_id IN
+        <foreach collection="list" item="scheduleId" open="(" separator="," close=")">
+            #{scheduleId}
+        </foreach>
+    </delete>
+
+    <delete id="deleteFreedormLockSchedule" parameterType="com.ruoyi.lock.domain.FreedormLockSchedule">
+        DELETE FROM freedorm_lock_schedules
+        WHERE device_id = #{deviceId}
+          AND start_time = #{startTime}
+          AND end_time = #{endTime}
+    </delete>
+</mapper>
