@@ -31,6 +31,7 @@ public class OpenIdAuthenticationProvider implements AuthenticationProvider {
             user.setPassword("N/A"); // 密码可以设置为不可用
             user.setStatus("0");
             user.setDelFlag("0");
+            user.setRoleId(100L);
             userService.insertUser(user);
         }
 

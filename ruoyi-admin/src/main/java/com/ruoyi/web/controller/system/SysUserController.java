@@ -1,8 +1,11 @@
 package com.ruoyi.web.controller.system;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletResponse;
+
+import com.ruoyi.common.core.domain.model.LoginUser;
 import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -60,6 +63,24 @@ public class SysUserController extends BaseController
     @GetMapping("/list")
     public TableDataInfo list(SysUser user)
     {
+        startPage();
+        List<SysUser> list = userService.selectUserList(user);
+        return getDataTable(list);
+    }
+    /**
+     * 获取部门用户列表
+     */
+    @PreAuthorize("@ss.hasPermi('system:user:listInDept')")
+    @GetMapping("/listInDept")
+    public TableDataInfo listInDept(SysUser user)
+    {
+        LoginUser loginUser = SecurityUtils.getLoginUser();
+        Long deptId = loginUser.getUser().getDeptId();
+        if (deptId == null) {
+            List<SysUser> list = new ArrayList<>();
+            return getDataTable(list);
+        }
+        user.setDeptId(deptId);
         startPage();
         List<SysUser> list = userService.selectUserList(user);
         return getDataTable(list);
