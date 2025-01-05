@@ -1,66 +1,58 @@
 package com.ruoyi.common.utils.file;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.ArrayUtils;
-import com.ruoyi.common.config.RuoYiConfig;
+
 import com.ruoyi.common.utils.DateUtils;
-import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.utils.uuid.IdUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.ArrayUtils;
+import org.springframework.stereotype.Component;
+
+import com.qcloud.cos.COSClient;
+import com.qcloud.cos.model.COSObject;
+import com.qcloud.cos.model.DeleteObjectRequest;
+import com.qcloud.cos.model.GetObjectRequest;
+import com.ruoyi.common.constant.Constants;
+import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.common.utils.cos.CosClientFactory;
 
 /**
  * 文件处理工具类
- * 
- * @author ruoyi
  */
-public class FileUtils
-{
+@Component
+public class FileUtils {
+
     public static String FILENAME_PATTERN = "[a-zA-Z0-9_\\-\\|\\.\\u4e00-\\u9fa5]+";
 
     /**
      * 输出指定文件的byte数组
-     * 
-     * @param filePath 文件路径
+     *
+     * @param filePath 文件路径（COS URL）
      * @param os 输出流
      * @return
      */
-    public static void writeBytes(String filePath, OutputStream os) throws IOException
-    {
-        FileInputStream fis = null;
-        try
-        {
-            File file = new File(filePath);
-            if (!file.exists())
-            {
-                throw new FileNotFoundException(filePath);
-            }
-            fis = new FileInputStream(file);
-            byte[] b = new byte[1024];
-            int length;
-            while ((length = fis.read(b)) > 0)
-            {
-                os.write(b, 0, length);
-            }
-        }
-        catch (IOException e)
-        {
-            throw e;
-        }
-        finally
-        {
-            IOUtils.close(os);
-            IOUtils.close(fis);
+    public static void writeBytes(String filePath, OutputStream os) throws IOException {
+        COSClient cosClient = CosClientFactory.getCosClient();
+        String bucketName = CosClientFactory.getBucketName();
+
+        // 从文件URL中解析出COS的key
+        String key = getKeyFromUrl(filePath);
+
+        GetObjectRequest getObjectRequest = new GetObjectRequest(bucketName, key);
+        COSObject cosObject = cosClient.getObject(getObjectRequest);
+        try (InputStream inputStream = cosObject.getObjectContent()) {
+            IOUtils.copy(inputStream, os);
+        } catch (Exception e) {
+            throw new IOException("从COS读取文件失败", e);
+        } finally {
+            IOUtils.closeQuietly(os);
+            // COSObject不需要显式关闭，已在try-with-resources中关闭
         }
     }
 
@@ -68,62 +60,62 @@ public class FileUtils
      * 写数据到文件中
      *
      * @param data 数据
-     * @return 目标文件
+     * @return 目标文件的COS URL
      * @throws IOException IO异常
      */
-    public static String writeImportBytes(byte[] data) throws IOException
-    {
-        return writeBytes(data, RuoYiConfig.getImportPath());
+    public static String writeImportBytes(byte[] data) throws IOException {
+        return writeBytes(data, "imports"); // 示例目录
     }
 
     /**
      * 写数据到文件中
      *
      * @param data 数据
-     * @param uploadDir 目标文件
-     * @return 目标文件
+     * @param uploadDir COS中的目标目录
+     * @return 目标文件的COS URL
      * @throws IOException IO异常
      */
-    public static String writeBytes(byte[] data, String uploadDir) throws IOException
-    {
-        FileOutputStream fos = null;
-        String pathName = "";
-        try
-        {
-            String extension = getFileExtendName(data);
-            pathName = DateUtils.datePath() + "/" + IdUtils.fastUUID() + "." + extension;
-            File file = FileUploadUtils.getAbsoluteFile(uploadDir, pathName);
-            fos = new FileOutputStream(file);
-            fos.write(data);
+    public static String writeBytes(byte[] data, String uploadDir) throws IOException {
+        COSClient cosClient = CosClientFactory.getCosClient();
+        String bucketName = CosClientFactory.getBucketName();
+        String extension = getFileExtendName(data);
+        String pathName = DateUtils.datePath() + "/" + IdUtils.fastUUID() + "." + extension;
+        String cosKey = uploadDir + "/" + pathName;
+
+        try (InputStream inputStream = new ByteArrayInputStream(data)) {
+            com.qcloud.cos.model.PutObjectRequest putObjectRequest = new com.qcloud.cos.model.PutObjectRequest(bucketName, cosKey, inputStream, null);
+            cosClient.putObject(putObjectRequest);
+        } catch (Exception e) {
+            throw new IOException("上传字节数据到COS失败", e);
         }
-        finally
-        {
-            IOUtils.close(fos);
-        }
-        return FileUploadUtils.getPathFileName(uploadDir, pathName);
+
+        return getPathFileName(uploadDir, pathName);
     }
 
     /**
      * 删除文件
-     * 
-     * @param filePath 文件
-     * @return
+     *
+     * @param filePath 文件的COS URL
+     * @return true 删除成功，false 删除失败
      */
-    public static boolean deleteFile(String filePath)
-    {
-        boolean flag = false;
-        File file = new File(filePath);
-        // 路径为文件且不为空则进行删除
-        if (file.isFile() && file.exists())
-        {
-            flag = file.delete();
+    public static boolean deleteFile(String filePath) {
+        COSClient cosClient = CosClientFactory.getCosClient();
+        String bucketName = CosClientFactory.getBucketName();
+        String key = getKeyFromUrl(filePath);
+
+        try {
+            DeleteObjectRequest deleteObjectRequest = new DeleteObjectRequest(bucketName, key);
+            cosClient.deleteObject(deleteObjectRequest);
+            return true;
+        } catch (Exception e) {
+            // 可以记录日志
+            return false;
         }
-        return flag;
     }
 
     /**
      * 文件名称验证
-     * 
+     *
      * @param filename 文件名称
      * @return true 正常 false 非法
      */
@@ -134,7 +126,7 @@ public class FileUtils
 
     /**
      * 检查文件是否可下载
-     * 
+     *
      * @param resource 需要下载的文件
      * @return true 正常 false 非法
      */
@@ -158,7 +150,7 @@ public class FileUtils
 
     /**
      * 下载文件名重新编码
-     * 
+     *
      * @param request 请求对象
      * @param fileName 文件名
      * @return 编码后的文件名
@@ -228,28 +220,20 @@ public class FileUtils
 
     /**
      * 获取图像后缀
-     * 
+     *
      * @param photoByte 图像数据
      * @return 后缀名
      */
-    public static String getFileExtendName(byte[] photoByte)
-    {
+    public static String getFileExtendName(byte[] photoByte) {
         String strFileExtendName = "jpg";
         if ((photoByte[0] == 71) && (photoByte[1] == 73) && (photoByte[2] == 70) && (photoByte[3] == 56)
-                && ((photoByte[4] == 55) || (photoByte[4] == 57)) && (photoByte[5] == 97))
-        {
+                && ((photoByte[4] == 55) || (photoByte[4] == 57)) && (photoByte[5] == 97)) {
             strFileExtendName = "gif";
-        }
-        else if ((photoByte[6] == 74) && (photoByte[7] == 70) && (photoByte[8] == 73) && (photoByte[9] == 70))
-        {
+        } else if ((photoByte[6] == 74) && (photoByte[7] == 70) && (photoByte[8] == 73) && (photoByte[9] == 70)) {
             strFileExtendName = "jpg";
-        }
-        else if ((photoByte[0] == 66) && (photoByte[1] == 77))
-        {
+        } else if ((photoByte[0] == 66) && (photoByte[1] == 77)) {
             strFileExtendName = "bmp";
-        }
-        else if ((photoByte[1] == 80) && (photoByte[2] == 78) && (photoByte[3] == 71))
-        {
+        } else if ((photoByte[1] == 80) && (photoByte[2] == 78) && (photoByte[3] == 71)) {
             strFileExtendName = "png";
         }
         return strFileExtendName;
@@ -257,14 +241,12 @@ public class FileUtils
 
     /**
      * 获取文件名称 /profile/upload/2022/04/16/ruoyi.png -- ruoyi.png
-     * 
+     *
      * @param fileName 路径名称
      * @return 没有文件路径的名称
      */
-    public static String getName(String fileName)
-    {
-        if (fileName == null)
-        {
+    public static String getName(String fileName) {
+        if (fileName == null) {
             return null;
         }
         int lastUnixPos = fileName.lastIndexOf('/');
@@ -275,17 +257,43 @@ public class FileUtils
 
     /**
      * 获取不带后缀文件名称 /profile/upload/2022/04/16/ruoyi.png -- ruoyi
-     * 
+     *
      * @param fileName 路径名称
      * @return 没有文件路径和后缀的名称
      */
-    public static String getNameNotSuffix(String fileName)
-    {
-        if (fileName == null)
-        {
+    public static String getNameNotSuffix(String fileName) {
+        if (fileName == null) {
             return null;
         }
         String baseName = FilenameUtils.getBaseName(fileName);
         return baseName;
     }
+
+    /**
+     * 从COS URL中解析出key
+     *
+     * @param url COS文件URL
+     * @return key
+     */
+    static String getKeyFromUrl(String url) {
+        String domain = CosClientFactory.getDomain();
+        if (url.startsWith(domain)) {
+            return url.substring(domain.length() + 1); // 去掉域名和斜杠
+        }
+        return url; // 如果不包含域名，则直接返回
+    }
+
+    /**
+     * 获取文件的COS URL
+     *
+     * @param uploadDir COS中的目录
+     * @param fileName 文件名
+     * @return COS文件URL
+     */
+    private static String getPathFileName(String uploadDir, String fileName) {
+        String domain = CosClientFactory.getDomain();
+        return domain + "/" + uploadDir + "/" + fileName;
+    }
+
+
 }
