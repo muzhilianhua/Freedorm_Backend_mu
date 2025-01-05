@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.lock.mapper.DevicesMapper">
+    
+    <resultMap type="Devices" id="DevicesResult">
+        <result property="deviceId"    column="device_id"    />
+        <result property="macAddress"    column="mac_address"    />
+        <result property="isEnabled"    column="is_enabled"    />
+        <result property="deptId"    column="dept_id"    />
+        <result property="createdAt"    column="created_at"    />
+        <result property="updatedAt"    column="updated_at"    />
+    </resultMap>
+
+    <sql id="selectDevicesVo">
+        select device_id, mac_address, is_enabled, dept_id, created_at, updated_at from devices
+    </sql>
+
+    <select id="selectDevicesList" parameterType="Devices" resultMap="DevicesResult">
+        <include refid="selectDevicesVo"/>
+        <where>  
+            <if test="deviceId != null  and deviceId != ''"> and device_id = #{deviceId}</if>
+            <if test="macAddress != null  and macAddress != ''"> and mac_address = #{macAddress}</if>
+            <if test="isEnabled != null "> and is_enabled = #{isEnabled}</if>
+            <if test="deptId != null "> and dept_id = #{deptId}</if>
+            <if test="createdAt != null "> and created_at = #{createdAt}</if>
+            <if test="updatedAt != null "> and updated_at = #{updatedAt}</if>
+        </where>
+    </select>
+    
+    <select id="selectDevicesByDeviceId" parameterType="String" resultMap="DevicesResult">
+        <include refid="selectDevicesVo"/>
+        where device_id = #{deviceId}
+    </select>
+
+    <insert id="insertDevices" parameterType="Devices">
+        insert into devices
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="deviceId != null">device_id,</if>
+            <if test="macAddress != null and macAddress != ''">mac_address,</if>
+            <if test="isEnabled != null">is_enabled,</if>
+            <if test="deptId != null">dept_id,</if>
+            <if test="createdAt != null">created_at,</if>
+            <if test="updatedAt != null">updated_at,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="deviceId != null">#{deviceId},</if>
+            <if test="macAddress != null and macAddress != ''">#{macAddress},</if>
+            <if test="isEnabled != null">#{isEnabled},</if>
+            <if test="deptId != null">#{deptId},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+            <if test="updatedAt != null">#{updatedAt},</if>
+         </trim>
+    </insert>
+
+    <update id="updateDevices" parameterType="Devices">
+        update devices
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="macAddress != null and macAddress != ''">mac_address = #{macAddress},</if>
+            <if test="isEnabled != null">is_enabled = #{isEnabled},</if>
+            <if test="deptId != null">dept_id = #{deptId},</if>
+            <if test="createdAt != null">created_at = #{createdAt},</if>
+            date_updated = sysdate()
+        </trim>
+        where device_id = #{deviceId}
+    </update>
+
+    <delete id="deleteDevicesByDeviceId" parameterType="String">
+        delete from devices where device_id = #{deviceId}
+    </delete>
+
+    <delete id="deleteDevicesByDeviceIds" parameterType="String">
+        delete from devices where device_id in 
+        <foreach item="deviceId" collection="array" open="(" separator="," close=")">
+            #{deviceId}
+        </foreach>
+    </delete>
+</mapper>

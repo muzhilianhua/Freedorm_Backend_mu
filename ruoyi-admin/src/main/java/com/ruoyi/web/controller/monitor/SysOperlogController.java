@@ -2,6 +2,9 @@ package com.ruoyi.web.controller.monitor;
 
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
+
+import com.ruoyi.common.core.domain.model.LoginUser;
+import com.ruoyi.common.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -65,5 +68,16 @@ public class SysOperlogController extends BaseController
     {
         operLogService.cleanOperLog();
         return success();
+    }
+
+    @GetMapping("/listInDept")
+    public TableDataInfo listInDept(SysOperLog operLog)
+    {
+        startPage();
+        LoginUser loginUser = SecurityUtils.getLoginUser();
+        operLog.setDeptName(loginUser.getUser().getDept().getDeptName());
+        operLog.setOperId(10L);
+        List<SysOperLog> list = operLogService.selectOperLogList(operLog);
+        return getDataTable(list);
     }
 }

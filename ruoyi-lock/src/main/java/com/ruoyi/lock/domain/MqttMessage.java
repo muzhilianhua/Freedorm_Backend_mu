@@ -30,4 +30,13 @@ public class MqttMessage<T> {
     public void setData(T data) {
         Data = data;
     }
+
+    @Override
+    public String toString() {
+        return "MqttMessage{" +
+                "Operate='" + Operate + '\'' +
+                ", Timestamp=" + Timestamp +
+                ", Data=" + Data +
+                '}';
+    }
 }

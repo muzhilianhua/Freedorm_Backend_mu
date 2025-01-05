@@ -29,20 +29,6 @@ public class LockServiceImpl implements ILockService {
     @Transactional(rollbackFor = Exception.class)
     public void addTiming(AddTimingRequest request) {
         for (Integer day : request.getDaysOfWeek()) {
-            // 检查 day 是否在1-7之间
-            if (day < 1 || day > 7) {
-                throw new IllegalArgumentException("dayOfWeek 必须在1到7之间");
-            }
-
-            // 检查是否有重叠的时间段
-            List<FreedormLockSchedule> existingSchedules = schedulesMapper.findByDeviceIdAndDayOfWeek(request.getDeviceId(), day);
-            for (FreedormLockSchedule existingSchedule : existingSchedules) {
-                if (isOverlapping(existingSchedule.getStartTime(), existingSchedule.getEndTime(),
-                        request.getStartTime().toString(), request.getEndTime().toString())) {
-                    throw new OverlappingTimingException("与现有时间段重叠，设备ID: " + request.getDeviceId() + ", 星期: " + day);
-                }
-            }
-
             // 创建新的时间表记录
             FreedormLockSchedule schedule = new FreedormLockSchedule();
             schedule.setDeviceId(request.getDeviceId());
@@ -79,7 +65,7 @@ public class LockServiceImpl implements ILockService {
      * @param newEnd        新时间段的结束时间（格式："HH:mm:ss"）
      * @return 如果重叠则返回 true，否则返回 false
      */
-    private boolean isOverlapping(String existingStart, String existingEnd, String newStart, String newEnd) {
+    public static boolean isOverlapping(String existingStart, String existingEnd, String newStart, String newEnd) {
         return !newStart.equals(existingEnd) && !newEnd.equals(existingStart) &&
                newStart.compareTo(existingEnd) < 0 && existingStart.compareTo(newEnd) < 0;
     }
