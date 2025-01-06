@@ -265,4 +265,15 @@ public class RedisCache
     {
         return redisTemplate.keys(pattern);
     }
+
+    /**
+     * 原子性递减指定键的数值
+     *
+     * @param key 键
+     * @param delta 递减的值
+     * @return 递减后的新值
+     */
+    public Long decrement(final String key, final long delta) {
+        return redisTemplate.opsForValue().decrement(key, delta);
+    }
 }

@@ -20,5 +20,9 @@ public enum OperatorType
     /**
      * 手机端用户
      */
-    MOBILE
+    MOBILE,
+    /**
+     * 游客
+     */
+    GUEST
 }

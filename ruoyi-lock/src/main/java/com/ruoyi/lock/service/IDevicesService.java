@@ -2,6 +2,7 @@ package com.ruoyi.lock.service;
 
 import java.util.List;
 import com.ruoyi.lock.domain.Devices;
+import com.ruoyi.lock.dto.BindDeviceRequest;
 
 /**
  * 设备Service接口
@@ -58,4 +59,8 @@ public interface IDevicesService
      * @return 结果
      */
     public int deleteDevicesByDeviceId(String deviceId);
+
+    Boolean device_is_online(String deviceId);
+
+    Boolean bind_device(BindDeviceRequest request);
 }

@@ -2,6 +2,8 @@ package com.ruoyi.lock.controller;
 
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
+
+import com.ruoyi.lock.dto.BindDeviceRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -100,5 +102,17 @@ public class DevicesController extends BaseController
     public AjaxResult remove(@PathVariable String[] deviceIds)
     {
         return toAjax(devicesService.deleteDevicesByDeviceIds(deviceIds));
+    }
+
+    @GetMapping("/device_is_online/{deviceId}")
+    public AjaxResult device_is_online(@PathVariable String deviceId)
+    {
+        return success(devicesService.device_is_online(deviceId));
+    }
+
+    @PostMapping("/bind_device")
+    public AjaxResult bind_device(@RequestBody BindDeviceRequest request)
+    {
+        return toAjax(devicesService.bind_device(request));
     }
 }

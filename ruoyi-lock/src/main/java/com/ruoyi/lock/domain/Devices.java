@@ -31,7 +31,7 @@ public class Devices extends BaseEntity
 
     /** 宿舍id */
     @Excel(name = "宿舍id")
-    private Integer deptId;
+    private Long deptId;
 
     /** 创建时间 */
     @JsonFormat(pattern = "yyyy-MM-dd")
@@ -70,12 +70,12 @@ public class Devices extends BaseEntity
     {
         return isEnabled;
     }
-    public void setDeptId(Integer deptId) 
+    public void setDeptId(Long deptId)
     {
         this.deptId = deptId;
     }
 
-    public Integer getDeptId() 
+    public Long getDeptId()
     {
         return deptId;
     }
