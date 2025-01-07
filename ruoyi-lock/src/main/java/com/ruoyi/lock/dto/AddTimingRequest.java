@@ -8,9 +8,6 @@ import java.util.List;
 
 public class AddTimingRequest {
 
-    @NotBlank(message = "deviceId不能为空")
-    private String deviceId;
-
     @NotEmpty(message = "daysOfWeek不能为空")
     private List<Integer> daysOfWeek; // 1=星期一，7=星期日
 
@@ -21,14 +18,6 @@ public class AddTimingRequest {
     private LocalTime endTime;
 
     // Getters and Setters
-
-    public String getDeviceId() {
-        return deviceId;
-    }
-
-    public void setDeviceId(String deviceId) {
-        this.deviceId = deviceId;
-    }
 
     public List<Integer> getDaysOfWeek() {
         return daysOfWeek;

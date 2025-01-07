@@ -60,7 +60,9 @@ public interface IDevicesService
      */
     public int deleteDevicesByDeviceId(String deviceId);
 
-    Boolean device_is_online(String deviceId);
+    Boolean deviceIsOnline(String deviceId);
 
-    Boolean bind_device(BindDeviceRequest request);
+    Boolean bindDevice(BindDeviceRequest request);
+
+    boolean unbindDevice();
 }

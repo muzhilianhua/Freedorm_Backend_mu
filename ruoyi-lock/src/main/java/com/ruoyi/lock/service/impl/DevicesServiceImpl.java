@@ -112,25 +112,28 @@ public class DevicesServiceImpl implements IDevicesService
     }
 
     @Override
-    public Boolean device_is_online(String deviceId) {
+    public Boolean deviceIsOnline(String deviceId) {
         return selectDevicesByDeviceId(deviceId).getIsEnabled() == 0;
     }
 
     @Override
     @Transactional
-    public Boolean bind_device(BindDeviceRequest request) {
+    public Boolean bindDevice(BindDeviceRequest request) {
         Devices device = selectDevicesByDeviceId(request.getDeviceId());
         SysUser user = SecurityUtils.getLoginUser().getUser();
         if (device.getDeptId() == null || device.getIsEnabled() == 1) {
             SysDept dept = new SysDept();
-            dept.setDeptName(request.getDeptName());
+            dept.setDeptName(user.getNickName() + "的设备");
             dept.setParentId(200L);
             dept.setOrderNum(0);
             dept.setLeader(user.getNickName());
-            deptService.insertDept(dept);
-            dept = deptService.selectDeptList(dept).get(0);
-            user.setDeptId(dept.getDeptId());
-            Long[] roleIds = user.getRoleIds();
+            user.setDeptId(deptService.insertDeptWithReturn(dept));
+            Long[] roleIds;
+            if (user.getRoleIds() == null) {
+                roleIds = new Long[0];
+            }else {
+                roleIds = user.getRoleIds();
+            }
             Long[] newRoleIds = new Long[roleIds.length + 1];
             System.arraycopy(roleIds, 0, newRoleIds, 0, roleIds.length);
             newRoleIds[roleIds.length] = 100L;
@@ -143,6 +146,14 @@ public class DevicesServiceImpl implements IDevicesService
             user.setDeptId(device.getDeptId());
             userService.updateUser(user);
         }
+        return true;
+    }
+
+    @Override
+    public boolean unbindDevice() {
+        SysUser user = SecurityUtils.getLoginUser().getUser();
+        user.setDeptId(null);
+        userService.updateUser(user);
         return true;
     }
 }

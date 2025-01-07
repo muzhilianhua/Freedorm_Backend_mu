@@ -1,6 +1,7 @@
 package com.ruoyi.lock.service.impl;
 
 import com.ruoyi.common.exception.OverlappingTimingException;
+import com.ruoyi.lock.domain.Devices;
 import com.ruoyi.lock.domain.FreedormLockSchedule;
 import com.ruoyi.lock.dto.AddTimingRequest;
 import com.ruoyi.lock.dto.DeleteTimingRequest;
@@ -27,11 +28,11 @@ public class LockServiceImpl implements ILockService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void addTiming(AddTimingRequest request) {
+    public void addTiming(AddTimingRequest request, Devices device) {
         for (Integer day : request.getDaysOfWeek()) {
             // 创建新的时间表记录
             FreedormLockSchedule schedule = new FreedormLockSchedule();
-            schedule.setDeviceId(request.getDeviceId());
+            schedule.setDeviceId(device.getDeviceId());
             schedule.setDayOfWeek(day);
             schedule.setStartTime(request.getStartTime().toString());
             schedule.setEndTime(request.getEndTime().toString());
@@ -51,7 +52,7 @@ public class LockServiceImpl implements ILockService {
             message.setTimestamp(System.currentTimeMillis() / 1000);
             message.setData(data);
 
-            String topic = "/" + request.getDeviceId() + "/server2client";
+            String topic = "/" + device.getDeviceId() + "/server2client";
             mqttGateway.sendToMqtt(topic, message);
         }
     }

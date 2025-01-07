@@ -221,6 +221,19 @@ public class SysDeptServiceImpl implements ISysDeptService
         return deptMapper.insertDept(dept);
     }
 
+    @Override
+    public long insertDeptWithReturn(SysDept dept) {
+        SysDept info = deptMapper.selectDeptById(dept.getParentId());
+        // 如果父节点不为正常状态,则不允许新增子节点
+        if (!UserConstants.DEPT_NORMAL.equals(info.getStatus()))
+        {
+            throw new ServiceException("部门停用，不允许新增");
+        }
+        dept.setAncestors(info.getAncestors() + "," + dept.getParentId());
+        deptMapper.insertDeptWithReturn(dept);
+        return dept.getDeptId();
+    }
+
     /**
      * 修改保存部门信息
      * 

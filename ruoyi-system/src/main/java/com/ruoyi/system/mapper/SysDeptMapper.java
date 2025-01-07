@@ -86,6 +86,14 @@ public interface SysDeptMapper
     public int insertDept(SysDept dept);
 
     /**
+     * 插入部门记录，并将生成的主键设置到 SysDept 对象中。
+     *
+     * @param sysDept 要插入的部门对象
+     * @return 插入的行数
+     */
+    public int insertDeptWithReturn(SysDept sysDept);
+
+    /**
      * 修改部门信息
      * 
      * @param dept 部门信息

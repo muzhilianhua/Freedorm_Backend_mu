@@ -107,6 +107,14 @@ public interface ISysDeptService
     public int insertDept(SysDept dept);
 
     /**
+     * 插入一条 SysDept 记录，并返回数据库生成的主键。
+     *
+     * @param dept 要插入的实体
+     * @return 返回插入后生成的主键值
+     */
+    public long insertDeptWithReturn(SysDept dept);
+
+    /**
      * 修改保存部门信息
      * 
      * @param dept 部门信息

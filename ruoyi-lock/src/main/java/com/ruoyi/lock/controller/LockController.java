@@ -5,12 +5,15 @@ import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.common.enums.OperatorType;
+import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.uuid.UUID;
+import com.ruoyi.lock.domain.Devices;
 import com.ruoyi.lock.domain.FreedormLockSchedule;
 import com.ruoyi.lock.dto.AddTimingRequest;
 import com.ruoyi.lock.dto.DeleteTimingRequest;
 import com.ruoyi.lock.dto.ExistingTimingResponse;
 import com.ruoyi.lock.mapper.FreedormLockSchedulesMapper;
+import com.ruoyi.lock.service.IDevicesService;
 import com.ruoyi.lock.service.ILockService;
 import com.ruoyi.lock.service.MqttGateway;
 import com.ruoyi.lock.domain.MqttMessage;
@@ -32,7 +35,7 @@ import static com.ruoyi.lock.service.impl.LockServiceImpl.isOverlapping;
 
 @RestController
 @RestControllerAdvice
-@RequestMapping("/api/lock")
+@RequestMapping("/lock")
 public class LockController {
 
     private static final Logger logger = LoggerFactory.getLogger(LockController.class);
@@ -44,6 +47,9 @@ public class LockController {
 
     @Autowired
     private ILockService lockService;
+
+    @Autowired
+    private IDevicesService devicesService;
 
     @Autowired
     private FreedormLockSchedulesMapper schedulesMapper;
@@ -79,21 +85,28 @@ public class LockController {
      */
     @PostMapping("/timing/add")
     public AjaxResult addTiming(@Valid @RequestBody AddTimingRequest request){
+        Devices devices = new Devices();
+        devices.setDeptId(SecurityUtils.getDeptId());
+         List<Devices> devicesList = devicesService.selectDevicesList(devices);
+        if (devicesList.isEmpty()) {
+            return AjaxResult.error("设备不存在或无权限访问");
+        }
+        devices = devicesList.get(0);
         for (Integer day : request.getDaysOfWeek()) {
             if (day < 1 || day > 7) {
                return AjaxResult.error("dayOfWeek 必须在1到7之间");
             }
             // 检查是否有重叠的时间段
-            List<FreedormLockSchedule> existingSchedules = schedulesMapper.findByDeviceIdAndDayOfWeek(request.getDeviceId(), day);
+            List<FreedormLockSchedule> existingSchedules = schedulesMapper.findByDeviceIdAndDayOfWeek(devices.getDeviceId(), day);
             for (FreedormLockSchedule existingSchedule : existingSchedules) {
                 if (isOverlapping(existingSchedule.getStartTime(), existingSchedule.getEndTime(),
                         request.getStartTime().toString(), request.getEndTime().toString())) {
-                    return AjaxResult.error("与现有时间段重叠，设备ID: " + request.getDeviceId() + ", 星期: " + day);
+                    return AjaxResult.error("与现有时间段重叠，设备ID: " + devices.getDeviceId() + ", 星期: " + day);
                 }
             }
         }
-        lockService.addTiming(request);
-        logger.info("Added timing for deviceId: {}", request.getDeviceId());
+        lockService.addTiming(request, devices);
+        logger.info("Added timing for deviceId: {}", devices.getDeviceId());
         return AjaxResult.success("定时开门时间段添加成功");
     }
 
