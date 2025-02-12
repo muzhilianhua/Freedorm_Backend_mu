@@ -154,6 +154,9 @@
     <!-- 添加或修改设备对话框 -->
     <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
+        <el-form-item label="设备id" prop="deviceId">
+          <el-input v-model="form.deviceId" placeholder="请输入设备id" />
+        </el-form-item>
         <el-form-item label="mac地址" prop="macAddress">
           <el-input v-model="form.macAddress" placeholder="请输入mac地址" />
         </el-form-item>
