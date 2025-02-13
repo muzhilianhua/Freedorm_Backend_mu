@@ -29,10 +29,6 @@ public class Devices extends BaseEntity
     @Excel(name = "是否禁用")
     private Integer isEnabled;
 
-    /** 宿舍id */
-    @Excel(name = "宿舍id")
-    private Long deptId;
-
     /** 创建时间 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     @Excel(name = "创建时间", width = 30, dateFormat = "yyyy-MM-dd")

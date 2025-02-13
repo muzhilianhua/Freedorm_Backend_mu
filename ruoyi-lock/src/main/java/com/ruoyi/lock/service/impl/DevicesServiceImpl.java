@@ -119,15 +119,15 @@ public class DevicesServiceImpl implements IDevicesService
     @Override
     @Transactional
     public Boolean bindDevice(BindDeviceRequest request) {
-        Devices device = selectDevicesByDeviceId(request.getDeviceId());
-        SysUser user = SecurityUtils.getLoginUser().getUser();
+        Devices device = selectDevicesByDeviceId(request.getDeviceId());   //定位设备对象
+        SysUser user = SecurityUtils.getLoginUser().getUser();      //定位当前用户对象
         if (device.getDeptId() == null || device.getIsEnabled() == 1) {
-            SysDept dept = new SysDept();
+            SysDept dept = new SysDept();       //创建新宿舍
             dept.setDeptName(user.getNickName() + "的设备");
             dept.setParentId(200L);
             dept.setOrderNum(0);
             dept.setLeader(user.getNickName());
-            user.setDeptId(deptService.insertDeptWithReturn(dept));
+            user.setDeptId(deptService.insertDeptWithReturn(dept));   //用户绑定宿舍
             Long[] roleIds;
             if (user.getRoleIds() == null) {
                 roleIds = new Long[0];
@@ -138,10 +138,10 @@ public class DevicesServiceImpl implements IDevicesService
             System.arraycopy(roleIds, 0, newRoleIds, 0, roleIds.length);
             newRoleIds[roleIds.length] = 100L;
             user.setRoleIds(newRoleIds);
-            userService.updateUser(user);
-            device.setDeptId(dept.getDeptId());
+            userService.updateUser(user);       //更新用户信息
+            device.setDeptId(dept.getDeptId());     //设备绑定宿舍
             device.setIsEnabled(0);
-            updateDevices(device);
+            updateDevices(device);      //更新设备信息
         } else {
             user.setDeptId(device.getDeptId());
             userService.updateUser(user);

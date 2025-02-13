@@ -3,7 +3,6 @@ package com.ruoyi.lock.dto;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
-import java.time.LocalTime;
 import java.util.List;
 
 public class DeleteTimingRequest {
@@ -15,10 +14,10 @@ public class DeleteTimingRequest {
     private List<Integer> daysOfWeek; // 1=星期一，7=星期日
 
     @NotNull(message = "startTime不能为空")
-    private LocalTime startTime;
+    private String startTime;
 
     @NotNull(message = "endTime不能为空")
-    private LocalTime endTime;
+    private String endTime;
 
     // Getters and Setters
 
@@ -38,19 +37,19 @@ public class DeleteTimingRequest {
         this.daysOfWeek = daysOfWeek;
     }
 
-    public LocalTime getStartTime() {
+    public String getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(LocalTime startTime) {
+    public void setStartTime(String startTime) {
         this.startTime = startTime;
     }
 
-    public LocalTime getEndTime() {
+    public String getEndTime() {
         return endTime;
     }
 
-    public void setEndTime(LocalTime endTime) {
+    public void setEndTime(String endTime) {
         this.endTime = endTime;
     }
 }

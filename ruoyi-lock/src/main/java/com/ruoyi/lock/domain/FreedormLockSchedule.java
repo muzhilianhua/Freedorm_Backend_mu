@@ -10,6 +10,7 @@ public class FreedormLockSchedule {
     private String endTime;
     private Date createdAt;
     private Date updatedAt;
+    private Boolean enabled;
 
     // Getters and Setters
 
@@ -67,5 +68,13 @@ public class FreedormLockSchedule {
 
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
     }
 }

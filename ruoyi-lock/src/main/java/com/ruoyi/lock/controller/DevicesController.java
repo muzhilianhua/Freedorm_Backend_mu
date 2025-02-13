@@ -118,7 +118,7 @@ public class DevicesController extends BaseController
     @PostMapping("/enableButton")
     public AjaxResult enableButton(@RequestParam("state") String state,@RequestParam("duration") int duration)
     {
-//        devicesService.enableButton();
+        //devicesService.enableButton();
         return success();
     }
 }
